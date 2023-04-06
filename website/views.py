@@ -1,83 +1,53 @@
-from flask import Blueprint, render_template, request, Flask
-import pandas as pd
-import numpy as np
-import requests
-import json
-import urllib.request
+import os
+from tqdm.gui import trange
 
-#Data Processing
+from flask import Blueprint, render_template, request, Flask, flash, send_file
+import pandas as pd
+from flask_login import login_user, login_required, logout_user, current_user
+
+from .summarizer import getSummary
+from .audioprocessing import getTranscript
+from .LSTM.NeuralNet.videoprocessing import getVideoCaptions
+from .data import text
+ 
+# Data Processing
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.feature_extraction.text import TfidfVectorizer
-# 
+
+from website.models import User
 
 views = Blueprint('views', __name__)
 
-data = pd.read_csv("data.csv")
-d = data.copy()
-df = d.drop(['link', 'venue', 'price'], axis=1)
-df.head()
-
-df['desc'] = data['description'] + data['city'] + ' ' + data['genre']
-df['desc'] = df['desc'].fillna(' ')
-
-vectorizer = TfidfVectorizer(analyzer = "word", stop_words = "english", token_pattern=r'\w{1,}', strip_accents='unicode')
-tfidfmatrix = vectorizer.fit_transform(df["desc"])
-
-raw_sim_matrix = cosine_similarity(tfidfmatrix)
-sim_matrix = pd.DataFrame(raw_sim_matrix)
-
-indices = pd.Series(df.index, index=df["title"])   
-
-#Recommendation
-def recommend(event_name):
-  #get event index
-  if(indices[event_name].size >=1):
-    event_val = indices[event_name][0]
-  else:
-    event_val = ""
-    pass
-  #find their similarity scores
-  sim_scores = sim_matrix[event_val]
-  
-  #similarity scores are
-  scores = list(enumerate(sim_scores))
-  sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)
-  
-  #top-10 recommendations shown
-  recs = sorted_scores[1:11]
-
-  #get indices of ranked movies
-  recs = [x[0] for x in recs]
-
-  #returns titles from original dataset, with indices as in recs
-  return list(df['title'].iloc[recs])
-
-cities = list(set(data["city"]))
-
-events = list(set(data["title"]))
-
-@views.route('/', methods=['GET', 'POST'])
 @views.route('/home', methods=['GET', 'POST'])
+@login_required
 def home():
-    imList = request.form
-    selected_event = imList.getlist('event')
-    if(selected_event):
-        return render_template("home.html",
-        len = len(output), 
-        total_events = len(events),
-        selected_event = sel_event,  
-        output=output, 
-        events=events)
-    print(selected_event)
-    sel_event = selected_event[0]
-    # if(len(selected_event) >= 1):
-    # sel_event = selected_event[0]
-    output = recommend(selected_event[0])
-    # else:
-    #     sel_event = "Ritviz – ‘Mimmi’ Album Launch Tour"
-    #     output = recommend("Ritviz – ‘Mimmi’ Album Launch Tour")
+  info = "Summarization done"
+  category = "success"
+  summary = "--"
+  captions = " "
+  transcript = " "
 
+  if request.method == 'POST':
+    file = request.files['vid']
+    name = file.filename
+    name = name.split('.')[0]
+    file.save(os.path.join('D:/SEM-6/E1_NLP ()/Project/proj/uploaded/', file.filename))
+    
+    transcript = getTranscript(name)
+    captions = getVideoCaptions('D:/SEM-6/E1_NLP ()/Project/proj/uploaded/' + file.filename)
+    summary = getSummary(captions + " \n " + transcript)
 
-# return based on availability
+    flash(info, category=category)    
+  return render_template('home.html', summary = summary, captions = captions, transcript = transcript)
+
+@views.route('/help')
+def help():
+    return render_template('help.html')
+
+@views.route('/data', methods=['GET', 'POST'])
+def data():
+  length_users = 0
+  users =  User.query.order_by(User.id).all()
+  if users:
+      length_users = len(users)
+      return render_template("data.html", users = users, len = length_users)
