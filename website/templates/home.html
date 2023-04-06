@@ -1,20 +1,66 @@
-{% extends "base.html" %} {% block title %} Home {% endblock %} {% block content
-%}
-<h1>Welcome to Home page</h1>
-<form id="form" method="POST">
-  <select name="event">
-    <!-- <option selected value="Ritviz – ‘Mimmi’ Album Launch Tour">--</option> -->
-    {%for i in range(0, total_events)%}
-    <option value="{{events[i]}}">{{events[i]}}</option>
-    {%endfor%}
-    <!-- <option value="pune">Pune</option>
-    <option value="bangalore">Bangalore</option>
-    <option value="bangalore">Mumbai</option> -->
-  </select>
-  <input id="btn" type="submit" />
-</form>
+{% extends "base.html" %} 
+{% block title %} Video Anonymization {% endblock %} {% block navbar %}
+<a class="nav-item nav-link" id="logout"  href="/logout">Logout</a>
+<a href="/help" class="nav-item nav-link">About</a>
+{% endblock %} 
 
-<h5>Selected event: {{selected_event}}</h5>
-{%for i in range(0, len)%}
-<li>{{output[i]}}</li>
-{%endfor%} {% endblock %}
+<!-- <div class="topnav">
+  <div class="topnav-right">
+  </div>
+</div> -->
+
+{% block content %}
+  <div class="container">
+    <h1>Video Summarization</h1>
+
+    <video width="400" height="500" id="preview" controls></video>
+
+    <form action="/home" method="POST" enctype="multipart/form-data" onsubmit="return checkForUpload()">
+      <div class="form-ele">
+        <div class="upld-container">
+          <div class="upld-info">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <div>
+              <h3>Choose a video</h3>
+              <h5>Limit 200MB per file</h5>
+              <h5>Limit for 30sec</h5>
+            </div>
+          </div>
+
+          <div class="vid-container">
+            <label for="vid" class="vid-label">Browse</label>
+            <input type="file" name="vid" id="vid" accept="video/*" />
+            <p id="vid-name"></p>
+          </div>
+        </div>
+
+        <br />
+        <input type="submit" value="Process" id="upld"/>
+      </div>
+    </form>
+
+    <h4>
+      SUMMARY
+    </h4>
+    <p>
+      {{summary}}
+    </p>
+    <br/>
+    <h4>
+      What Video Generated?
+    </h4>
+    <p>
+      {{captions}}
+    </p>
+    <br/>
+    <h4>
+      What Audio Generated?
+    </h4>
+    <p>
+      {{transcript}}
+    </p>
+
+      <h1>=============================</h1>
+  </div>
+
+{% endblock %}
